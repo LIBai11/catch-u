@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"> <!-- 禁止移动端缩放 -->
+  <title>逮捕小🐟</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.10.4/gsap.min.js"></script>
+  <style>
+    body {
+      display: flex;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden; /* 防止页面滚动 */
+      background: linear-gradient(135deg, #87CEFA, #4682B4); /* 渐变背景 */
+      position: relative;
+    }
+
+    .moving-text {
+      display: inline-block;
+      cursor: pointer;
+      user-select: none; /* 禁止文本选择 */
+      position: absolute;
+      font-size: 45px;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        touch-action: manipulation;
+      }
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      background-color: #3498db;
+      color: white;
+      font-size: 1rem;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    button:active {
+      transform: scale(0.95);
+    }
+
+    .alert-box {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 20px;
+      border-radius: 5px;
+      text-align: center;
+      z-index: 1000;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    .alert-box h2 {
+      font-size: 1rem;
+      margin: 0 0 10px;
+    }
+    /* 动态水波背景效果 */
+    .background-water {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .background-water::before, .background-water::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 20%, transparent 40%);
+      opacity: 0.5;
+      animation: water-waves 8s linear infinite;
+    }
+
+    .background-water::after {
+      animation-delay: -4s;
+    }
+
+    @keyframes water-waves {
+      0% {
+        transform: translateY(0) translateX(0);
+      }
+      50% {
+        transform: translateY(10%) translateX(-10%);
+      }
+      100% {
+        transform: translateY(0) translateX(0);
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="background-water"></div>
+<span class="moving-text">🐟</span>
+
+<script>
+  const movingText = document.querySelector('.moving-text');
+  const minMoveDistance = 100; // 最小移动距离
+  let originalPosition = {x: window.innerWidth / 2, y: window.innerHeight / 2};
+  let resetTimeout;
+  let missCount = 0;
+  let alertCount = 0;
+  let isTextMovable = true;
+
+  // 自定义弹窗函数
+  function showCustomAlert(message, showRestartButton = false) {
+    const alertBox = document.createElement('div');
+    alertBox.className = 'alert-box';
+
+    const alertMessage = document.createElement('h2');
+    alertMessage.innerText = message;
+    alertBox.appendChild(alertMessage);
+
+    if (showRestartButton) {
+      const restartButton = document.createElement('button');
+      restartButton.innerText = '重新开始';
+      restartButton.addEventListener('click', () => {
+        document.body.removeChild(alertBox);
+        restartGame();
+      });
+      alertBox.appendChild(restartButton);
+    }
+
+    document.body.appendChild(alertBox);
+
+    if (!showRestartButton) {
+      setTimeout(() => {
+        document.body.removeChild(alertBox);
+      }, 2000); // 2秒后自动消失
+    }
+  }
+  function restartGame() {
+    missCount = 0;
+    alertCount = 0;
+    isTextMovable = true;
+    resetText();
+    movingText.textContent = '🐟';
+  }
+
+  function moveText() {
+    if (!isTextMovable) {
+      showCustomAlert('逮到你啦', true);
+      movingText.textContent = '🎣'
+      clearTimeout(resetTimeout);
+      return;
+    }
+
+    // 随机生成新的位置，确保文字不会超出视口
+    const maxX = window.innerWidth - movingText.offsetWidth;
+    const maxY = window.innerHeight - movingText.offsetHeight;
+    let newX, newY;
+
+    // 确保移动距离不小于 minMoveDistance
+    do {
+      newX = Math.random() * maxX;
+    } while (Math.abs(newX - gsap.getProperty(movingText, "x")) < minMoveDistance);
+
+    do {
+      newY = Math.random() * maxY;
+    } while (Math.abs(newY - gsap.getProperty(movingText, "y")) < minMoveDistance);
+
+
+    gsap.to(movingText, {
+      duration: 1, // 动画持续时间
+      x: newX,
+      y: newY,
+      ease: "power1.out" // 动画缓动效果
+    });
+
+    // 重置位置的定时器
+    clearTimeout(resetTimeout);
+    resetTimeout = setTimeout(resetText, 3000); // 1.5 秒后恢复原位
+    missCount++;
+    if (missCount >= 3) {
+      // resetText();
+      showCustomAlert('这都抓不住我！再来一次吧～');
+      missCount = 0; // 重置计数器
+      alertCount++;
+      if (alertCount >= 3) {
+        isTextMovable = false;
+      }
+    }
+  }
+
+  function resetText() {
+    gsap.to(movingText, {
+      duration: 1, // 动画持续时间
+      x: originalPosition.x - movingText.offsetWidth / 2,
+      y: originalPosition.y - movingText.offsetHeight / 2,
+      ease: "power1.out" // 动画缓动效果
+    });
+  }
+
+  // 仅在桌面端添加鼠标事件监听
+  if (!('ontouchstart' in window)) {
+    movingText.addEventListener('mouseenter', moveText);
+  } else {
+    // 仅在移动端添加触摸事件监听
+    movingText.addEventListener('touchstart', moveText);
+  }
+
+  // 初始化文字位置
+  gsap.set(movingText, {
+    x: originalPosition.x - movingText.offsetWidth / 2,
+    y: originalPosition.y - movingText.offsetHeight / 2
+  });
+
+  // 窗口大小改变时，更新原始位置并重置文字位置
+  window.addEventListener('resize', () => {
+    originalPosition = {x: window.innerWidth / 2, y: window.innerHeight / 2};
+    resetText();
+  });
+</script>
+
+</body>
+</html>
